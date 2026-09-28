@@ -1,0 +1,36 @@
+services:
+  snapcast:
+    build:
+      context: ./snapcast
+    container_name: multiroom-snapcast
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./snapcast/snapserver.conf:/etc/snapserver.conf:ro
+      - snapcast-data:/var/lib/snapserver
+    # host network: clients on LAN reach :1704 / control :1705, feeder hits :4953
+
+  hub:
+    build:
+      context: .
+      dockerfile: hub/Dockerfile
+    container_name: multiroom-hub
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - NAVIDROME_URL=${NAVIDROME_URL:-http://127.0.0.1:4533}
+      - NAVIDROME_USER=${NAVIDROME_USER:-}
+      - NAVIDROME_PASSWORD=${NAVIDROME_PASSWORD:-}
+      - SNAPCAST_HOST=${SNAPCAST_HOST:-127.0.0.1}
+      - SNAPCAST_CONTROL_PORT=${SNAPCAST_CONTROL_PORT:-1705}
+      - SNAPCAST_TCP_PORT=${SNAPCAST_TCP_PORT:-4953}
+      - HUB_HOST=${HUB_HOST:-0.0.0.0}
+      - HUB_PORT=${HUB_PORT:-8188}
+      - DATA_DIR=/data
+    volumes:
+      - ./data:/data
+    depends_on:
+      - snapcast
+
+volumes:
+  snapcast-data:

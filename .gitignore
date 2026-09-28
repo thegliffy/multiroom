@@ -1,0 +1,13 @@
+.env
+data/
+node_modules/
+web/dist/
+web/node_modules/
+hub/static/
+hub/__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+dist/
+*.egg-info/
+.DS_Store

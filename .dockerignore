@@ -1,0 +1,13 @@
+.git
+.env
+data/
+web/node_modules
+web/dist
+hub/__pycache__
+hub/static
+**/__pycache__
+*.pyc
+.venv
+README.md
+docs/
+agent/

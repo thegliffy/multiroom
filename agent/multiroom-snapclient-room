@@ -1,0 +1,15 @@
+#!/bin/bash
+set -euo pipefail
+SLUG="${1:?room slug}"
+ENV_FILE="/etc/multiroom/rooms/${SLUG}.env"
+set -a
+# shellcheck disable=SC1090
+source "${ENV_FILE}"
+set +a
+NAME="${ROOM_NAME:-$SLUG}"
+HOST="${SNAPCAST_HOST:?SNAPCAST_HOST required}"
+if [[ -n "${ALSA_DEVICE:-}" ]]; then
+  exec /usr/bin/snapclient -h "${HOST}" --hostID "${NAME}" --player alsa --soundcard "${ALSA_DEVICE}"
+fi
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+exec /usr/bin/snapclient -h "${HOST}" --hostID "${NAME}" --player pulse

@@ -1,0 +1,17 @@
+[Unit]
+Description=Multiroom Pi setup UI (Bluetooth + snapclient)
+After=network-online.target bluetooth.service
+Wants=network-online.target
+
+[Service]
+Environment=AGENT_HOST=0.0.0.0
+Environment=AGENT_PORT=8190
+WorkingDirectory=/opt/multiroom-agent
+ExecStart=/opt/multiroom-agent/venv/bin/python /opt/multiroom-agent/agent_server.py
+Restart=always
+RestartSec=3
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Multiroom Snapclient room %i
+After=network-online.target bluetooth.service bluealsa.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/multiroom-snapclient-room %i
+Restart=always
+RestartSec=3
+User=__MULTIROOM_USER__
+Group=audio
+SupplementaryGroups=bluetooth
+
+[Install]
+WantedBy=multi-user.target
