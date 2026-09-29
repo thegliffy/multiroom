@@ -44,6 +44,7 @@ sudo ./agent/add-room.sh kitchen 10.0.0.10 hci0 AA:BB:CC:DD:EE:FF
 
 - [docs/setup.md](docs/setup.md) — hub, pairing, latency
 - [docs/multi-adapter.md](docs/multi-adapter.md) — one USB dongle per extra speaker
+- Services panel in the hub UI — register each Pi (`:8190`) to start/stop/restart its systemd units from one place
 
 ## Dev (without the Docker UI build)
 

@@ -15,6 +15,7 @@ from hub.config import get_settings
 from hub.feeder import StreamFeeder
 from hub.navidrome import NavidromeClient
 from hub.playback import PlaybackController
+from hub.services import collect_services, run_service_action
 from hub.snapcast import SnapcastClient, SnapcastError
 from hub.store import RoomStore
 
@@ -65,6 +66,11 @@ class PlayRadioBody(BaseModel):
 
 class EnqueueBody(BaseModel):
     id: str
+
+
+class AgentBody(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    url: str = Field(min_length=3, max_length=256)
 
 
 @asynccontextmanager
@@ -374,6 +380,49 @@ async def resume() -> dict[str, Any]:
 @app.post("/api/playback/clear-queue")
 async def clear_queue() -> dict[str, Any]:
     return pb().clear_queue().to_dict()
+
+
+# --- Services / Pi agents ---
+
+
+@app.get("/api/services")
+async def list_services() -> dict[str, Any]:
+    return await collect_services(app.state.settings, store(), snap(), nav())
+
+
+@app.post("/api/services/{host_id}/{service_id}/{action}")
+async def service_action(host_id: str, service_id: str, action: str) -> dict[str, Any]:
+    try:
+        result = await run_service_action(store(), app.state.settings, host_id, service_id, action)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(502, str(exc)) from exc
+    overview = await collect_services(app.state.settings, store(), snap(), nav())
+    return {"result": result, **overview}
+
+
+@app.get("/api/agents")
+async def list_agents() -> dict[str, Any]:
+    return {"agents": store().list_agents(app.state.settings.agent_urls())}
+
+
+@app.post("/api/agents")
+async def add_agent(body: AgentBody) -> dict[str, Any]:
+    try:
+        agent = store().add_agent(body.name, body.url)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"agent": agent, "agents": store().list_agents(app.state.settings.agent_urls())}
+
+
+@app.delete("/api/agents/{agent_id}")
+async def delete_agent(agent_id: str) -> dict[str, Any]:
+    if not store().remove_agent(agent_id):
+        raise HTTPException(404, "Agent not found (env-configured agents cannot be removed here)")
+    return {"agents": store().list_agents(app.state.settings.agent_urls())}
 
 
 # --- Static UI ---

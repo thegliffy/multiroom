@@ -64,6 +64,48 @@ export type Artist = {
   coverUrl?: string;
 };
 
+export type ManagedService = {
+  id: string;
+  name: string;
+  kind: string;
+  state: string;
+  detail?: string;
+  controllable?: boolean;
+  actions?: string[];
+  sub_state?: string;
+  enabled?: string;
+};
+
+export type ServiceHost = {
+  id: string;
+  name: string;
+  kind: string;
+  url?: string | null;
+  reachable?: boolean;
+  hostname?: string | null;
+  error?: string | null;
+  services: ManagedService[];
+};
+
+export type ServiceSuggestion = {
+  name: string;
+  url: string;
+  host?: string;
+};
+
+export type ServicesOverview = {
+  hosts: ServiceHost[];
+  suggestions?: ServiceSuggestion[];
+  result?: unknown;
+};
+
+export type Agent = {
+  id: string;
+  name: string;
+  url: string;
+  source?: string;
+};
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
@@ -145,4 +187,18 @@ export const api = {
   stop: () => req<Playback>("/api/playback/stop", { method: "POST" }),
   pause: () => req<Playback>("/api/playback/pause", { method: "POST" }),
   resume: () => req<Playback>("/api/playback/resume", { method: "POST" }),
+  services: () => req<ServicesOverview>("/api/services"),
+  serviceAction: (hostId: string, serviceId: string, action: string) =>
+    req<ServicesOverview>(
+      `/api/services/${encodeURIComponent(hostId)}/${encodeURIComponent(serviceId)}/${encodeURIComponent(action)}`,
+      { method: "POST" }
+    ),
+  agents: () => req<{ agents: Agent[] }>("/api/agents"),
+  addAgent: (name: string, url: string) =>
+    req<{ agent: Agent; agents: Agent[] }>("/api/agents", {
+      method: "POST",
+      body: JSON.stringify({ name, url }),
+    }),
+  removeAgent: (id: string) =>
+    req<{ agents: Agent[] }>(`/api/agents/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
