@@ -7,11 +7,13 @@ import {
   type Room,
   type Song,
 } from "./api";
+import ServicesView from "./ServicesView";
 
 type View =
   | { kind: "home" }
   | { kind: "album"; id: string; title: string }
-  | { kind: "artist"; id: string; title: string };
+  | { kind: "artist"; id: string; title: string }
+  | { kind: "services" };
 
 function formatDur(sec?: number) {
   if (!sec && sec !== 0) return "";
@@ -168,6 +170,13 @@ export default function App() {
           <button type="button" disabled={busy} onClick={() => runSearch(query)}>
             Search
           </button>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => setView({ kind: "services" })}
+          >
+            Services
+          </button>
         </div>
       </header>
 
@@ -176,6 +185,10 @@ export default function App() {
         {error ? <div className="err">{error}</div> : null}
       </div>
 
+      {view.kind === "services" ? (
+        <ServicesView onBack={() => goHome()} onError={setError} />
+      ) : (
+      <>
       <section className="stage">
         <div className={`hero ${current ? "playing" : ""}`}>
           {current?.cover_url ? (
@@ -498,6 +511,8 @@ export default function App() {
           <p style={{ color: "var(--ink-muted)" }}>No albums yet.</p>
         )}
       </section>
+      </>
+      )}
 
       {current ? (
         <div className="dock">

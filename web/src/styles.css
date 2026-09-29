@@ -558,6 +558,189 @@ button {
   }
 }
 
+.services-panel {
+  animation: rise 0.45s ease both;
+  margin-bottom: 1.5rem;
+}
+
+.services-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.services-head h2 {
+  margin: 0.15rem 0 0.35rem;
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  letter-spacing: -0.02em;
+}
+
+.services-lead {
+  margin: 0;
+  color: var(--ink-muted);
+  max-width: 42rem;
+  line-height: 1.45;
+}
+
+.services-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-bottom: 1rem;
+}
+
+.host-card {
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 1rem 1.05rem 1.1rem;
+}
+
+.host-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.host-head h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.2rem;
+}
+
+.host-head small,
+.service-copy small {
+  color: var(--ink-muted);
+  word-break: break-all;
+}
+
+.host-error {
+  margin: 0 0 0.75rem;
+  color: var(--danger);
+  font-size: 0.88rem;
+}
+
+.service-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.service-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.7rem 0.75rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+}
+
+.service-copy {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.service-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.badge.soft {
+  background: rgba(31, 79, 156, 0.1);
+  color: var(--cobalt);
+}
+
+.svc-btn {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 999px;
+  padding: 0.32rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.svc-btn.danger {
+  color: var(--danger);
+  border-color: rgba(180, 35, 24, 0.35);
+}
+
+.svc-btn.ghost-wide {
+  margin-top: 0.85rem;
+  width: 100%;
+}
+
+.add-agent .add-agent-row {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+@media (min-width: 720px) {
+  .add-agent .add-agent-row {
+    grid-template-columns: 1fr 1.4fr auto;
+    align-items: end;
+  }
+}
+
+.add-agent label {
+  display: grid;
+  gap: 0.3rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.add-agent input {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.65rem 0.75rem;
+  background: white;
+}
+
+.suggestions {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.suggestions h4 {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.suggestion {
+  text-align: left;
+  border: 1px dashed rgba(31, 79, 156, 0.35);
+  background: rgba(31, 79, 156, 0.06);
+  border-radius: 12px;
+  padding: 0.65rem 0.8rem;
+  font-weight: 600;
+}
+
+.empty-row {
+  color: var(--ink-muted);
+  border-style: dashed !important;
+}
+
 @media (max-width: 640px) {
   .dock {
     flex-direction: column;

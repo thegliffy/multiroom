@@ -388,6 +388,131 @@ def restart_room(slug: str) -> dict[str, Any]:
     return {"snapclient": run(["systemctl", "is-active", svc]).stdout.strip(), "rooms": list_rooms()}
 
 
+CORE_SERVICES = [
+    ("multiroom-agent.service", "Pairing UI", "Multiroom agent on :8190"),
+    ("bluealsa.service", "BlueALSA", "Bluetooth A2DP audio"),
+    ("bluetooth.service", "Bluetooth", "BlueZ stack"),
+]
+
+
+def _systemctl_show(unit: str) -> dict[str, str]:
+    proc = run(
+        [
+            "systemctl",
+            "show",
+            unit,
+            "--no-page",
+            "-p",
+            "Id",
+            "-p",
+            "ActiveState",
+            "-p",
+            "SubState",
+            "-p",
+            "UnitFileState",
+            "-p",
+            "Description",
+            "-p",
+            "FragmentPath",
+        ]
+    )
+    props: dict[str, str] = {}
+    for line in (proc.stdout or "").splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            props[k] = v
+    return props
+
+
+def _service_entry(unit: str, name: str, detail: str, controllable: bool = True) -> dict[str, Any]:
+    props = _systemctl_show(unit)
+    state = props.get("ActiveState") or run(["systemctl", "is-active", unit]).stdout.strip() or "unknown"
+    enabled = props.get("UnitFileState") or ""
+    desc = props.get("Description") or detail
+    actions = ["restart", "start", "stop"] if controllable else ["restart"] if unit == "multiroom-agent.service" else []
+    if unit == "multiroom-agent.service":
+        # Stopping the agent kills this API; restart is still useful.
+        actions = ["restart"]
+    return {
+        "id": unit,
+        "name": name,
+        "kind": "systemd",
+        "state": state,
+        "sub_state": props.get("SubState") or "",
+        "enabled": enabled,
+        "detail": detail or desc,
+        "controllable": bool(actions),
+        "actions": actions,
+    }
+
+
+def list_services() -> list[dict[str, Any]]:
+    services = [_service_entry(unit, name, detail) for unit, name, detail in CORE_SERVICES]
+    seen = {s["id"] for s in services}
+    for room in list_rooms():
+        unit = room.get("service") or f"multiroom-room@{room['slug']}.service"
+        if unit in seen:
+            continue
+        detail = " · ".join(
+            x for x in [room.get("BT_ADAPTER"), room.get("BT_MAC"), room.get("SNAPCAST_HOST")] if x
+        )
+        services.append(
+            _service_entry(
+                unit,
+                f"Room · {room.get('ROOM_NAME') or room.get('slug')}",
+                detail or room.get("slug", ""),
+            )
+        )
+        seen.add(unit)
+    # Catch orphaned room units still loaded in systemd
+    listed = run(["systemctl", "list-units", "multiroom-room@*.service", "--all", "--no-legend", "--no-pager"])
+    for line in (listed.stdout or "").splitlines():
+        parts = line.split()
+        if not parts:
+            continue
+        unit = parts[0]
+        if not unit.endswith(".service") or unit in seen:
+            continue
+        slug = unit[len("multiroom-room@") : -len(".service")] if unit.startswith("multiroom-room@") else unit
+        services.append(_service_entry(unit, f"Room · {slug}", "systemd unit"))
+        seen.add(unit)
+    return services
+
+
+@app.get("/api/services")
+def get_services() -> dict[str, Any]:
+    return {
+        "hostname": run(["hostname"]).stdout.strip(),
+        "services": list_services(),
+    }
+
+
+@app.post("/api/services/{service_id}/{action}")
+def service_action(service_id: str, action: str) -> dict[str, Any]:
+    if action not in {"start", "stop", "restart"}:
+        raise HTTPException(400, "action must be start, stop, or restart")
+    if not re.match(r"^[A-Za-z0-9@._:-]+$", service_id):
+        raise HTTPException(400, "invalid service id")
+    allowed = {s["id"]: s for s in list_services()}
+    meta = allowed.get(service_id)
+    if not meta:
+        raise HTTPException(404, f"Unknown service: {service_id}")
+    if action not in (meta.get("actions") or []):
+        raise HTTPException(400, f"{action} not allowed for {service_id}")
+    proc = run(["systemctl", action, service_id], timeout=45.0)
+    if proc.returncode != 0 and action != "restart":
+        # restart of multiroom-agent may cut the response; treat other failures as errors
+        err = (proc.stderr or proc.stdout or "").strip() or f"systemctl {action} failed"
+        raise HTTPException(500, err)
+    time.sleep(0.4)
+    return {
+        "ok": True,
+        "service": next((s for s in list_services() if s["id"] == service_id), None),
+        "services": list_services(),
+        "log": ((proc.stdout or "") + (proc.stderr or "")).strip(),
+    }
+
+
 UI = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -472,6 +597,12 @@ pre{white-space:pre-wrap;background:#10141c;color:#dbe4f0;padding:.75rem;border-
     <p class="hint">These already send audio to Multiroom. Remove one if it should not play.</p>
     <div id="rooms"></div>
   </section>
+
+  <section class="card">
+    <h2>Services on this Pi</h2>
+    <p class="hint">Start, stop, or restart the local Multiroom stack. Restarting the pairing UI may briefly disconnect this page.</p>
+    <div id="services"></div>
+  </section>
 </main>
 <script>
 let selectedMac = '';
@@ -550,8 +681,41 @@ function render(s){
     refresh();
   });
   document.getElementById('saveRoom').disabled = busy || !selectedMac;
+  renderServices(s.services);
 }
-async function refresh(){ render(await api('/api/status')); }
+async function renderServices(list){
+  const services = list || (await api('/api/services').catch(()=>({services:[]}))).services || [];
+  document.getElementById('services').innerHTML = services.map(svc=>{
+    const ok = svc.state==='active';
+    const actions=(svc.actions||[]).map(a=>
+      `<button class="${a==='stop'?'danger':'ghost'}" type="button" data-svc="${svc.id}" data-act="${a}">${a}</button>`
+    ).join('');
+    return `<div class="item">
+      <div class="who"><strong>${svc.name}</strong>
+        <small>${svc.id}${svc.detail?' · '+svc.detail:''}</small></div>
+      <div class="actions">
+        ${badge(ok, svc.state, svc.state)}
+        ${actions}
+      </div>
+    </div>`;
+  }).join('') || '<p class="empty">No services reported.</p>';
+  document.querySelectorAll('[data-svc]').forEach(b=>b.onclick=async()=>{
+    setMsg(b.dataset.act+' '+b.dataset.svc+'…');
+    try{
+      await api('/api/services/'+encodeURIComponent(b.dataset.svc)+'/'+b.dataset.act,{method:'POST'});
+      setMsg('Done.','ok');
+    }catch(e){ setMsg(String(e.message||e),'err'); }
+    refresh();
+  });
+}
+async function refresh(){
+  const s = await api('/api/status');
+  try {
+    const svc = await api('/api/services');
+    s.services = svc.services;
+  } catch {}
+  render(s);
+}
 async function pair(mac, name){
   busy = true;
   document.getElementById('saveRoom').disabled = true;

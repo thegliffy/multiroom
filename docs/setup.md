@@ -78,6 +78,16 @@ Bluetooth A2DP adds delay. In the web UI, raise **Latency ms** on a room until i
 4. Browse/search Navidrome and hit **Play**
 5. Adjust per-room volume / mute / latency
 
+### Services panel
+
+Open **Services** in the hub top bar to see the hub stack (Hub, Snapcast, Navidrome) and every registered Pi.
+
+1. Add each Pi pairing UI (`http://<pi-ip>:8190`), or click a Snapcast suggestion when a client is already connected.
+2. From there you can **start / stop / restart** BlueALSA, Bluetooth, room snapclients, and the pairing UI.
+3. You can also set `MULTIROOM_AGENTS=Living|http://10.0.0.20:8190` in `.env` so agents are registered at boot.
+
+Hub-side Docker services are shown as health only (restart them with `docker compose`).
+
 ## 5. Troubleshooting
 
 | Symptom | Check |
@@ -85,7 +95,8 @@ Bluetooth A2DP adds delay. In the web UI, raise **Latency ms** on a room until i
 | Snapcast error in health | `docker compose logs snapcast` — is port 1705 listening? |
 | Navidrome error | URL reachable from hub host? User/pass correct? |
 | Play does nothing | `docker compose logs hub` — ffmpeg errors? Is TCP 4953 open in snapserver? |
-| Room missing | `systemctl status multiroom-room@<slug>` and `journalctl -u multiroom-room@<slug> -f` |
+| Room missing | `systemctl status multiroom-room@<slug>` and `journalctl -u multiroom-room@<slug> -f` — or use **Services** in the hub |
+| Pi unreachable in Services | Can you open `http://<pi-ip>:8190` from the hub host? Firewall / wrong URL? |
 | No sound | Speaker paired on that radio? `ALSA_DEVICE` in `/etc/multiroom/rooms/<slug>.env` should be `bluealsa:DEV=<MAC>,PROFILE=a2dp` |
 | Rooms out of sync | Increase latency on the early room(s) |
 
